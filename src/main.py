@@ -102,36 +102,21 @@ def parse_search_input(message):
 
 
 def generate_message_from_trades(available_trades):
-    messages = []
-    current_message = ""
+
+    full_message = ""
 
     for discord_id in available_trades:
         discord_user = bot.get_user(int(discord_id))
-        user_header = f"\n{discord_user.mention} has available trades: \n"
+        full_message += f"\n{discord_user.mention} has available trades: \n"
         cards = available_trades[discord_id]
-        
-        # Check if adding user header would exceed limit
-        if current_message and len(current_message) + len(user_header) > 2000:
-            messages.append(current_message)
-            current_message = user_header
-        else:
-            current_message += user_header
-        
-        # Add each card
         for card_id in cards:
             card = cards[card_id]
-            card_line = f"{card['count']} copies of {{ {card['name']} \| #{card['cn']} \| {card['expansion']} }} .\n"
+            full_message += f"{card['count']} copies of {{ {card['name']} \| #{card['cn']} \| {card['expansion']} }} .\n"
+
             
-            if len(current_message) + len(card_line) > 2000:
-                messages.append(current_message)
-                current_message = card_line
-            else:
-                current_message += card_line
-    
-    if current_message:
-        messages.append(current_message)
-    
-    return messages
+    if len(full_message) > 2000:
+        return "Too many search results. Please use a more specific query."
+    return full_message
 
 
 @bot.command()
@@ -196,9 +181,7 @@ async def search_self(ctx):
 
     available_trades = trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
-    messages = generate_message_from_trades(available_trades)
-    for message in messages:
-        await ctx.send(message)
+    await ctx.send(generate_message_from_trades(available_trades))
 
 if __name__ == "__main__":
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)
