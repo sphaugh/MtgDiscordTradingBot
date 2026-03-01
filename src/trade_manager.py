@@ -1,3 +1,5 @@
+import asyncio
+import aiohttp
 import json
 import logging
 import os
@@ -102,12 +104,20 @@ class TradeManager:
             logging.error("failed to save trader info after removal")
         return True
 
-    def search_for_card(self, card_name, active_discord_ids):
+    async def search_for_card(self, card_name, active_discord_ids):
+        semaphore = asyncio.Semaphore(8)
         available_trades = {}
-        for trader_id in self.traders:
-            if trader_id in active_discord_ids:
+
+        async def search_trader(session: aiohttp.ClientSession, trader_id: str):
+            async with semaphore:
                 trader = self.traders[trader_id]
-                found_cards = trader.search_moxfield(card_name)
+                found_cards = await trader.search_moxfield(session, card_name)
                 if found_cards:
                     available_trades[trader.discord_id] = found_cards
+
+        headers = {"User-Agent": "MtgDiscordTrading"}
+        async with aiohttp.ClientSession(headers=headers) as session, asyncio.TaskGroup() as group:
+            for tid in filter(lambda t: t in active_discord_ids, self.traders):
+                group.create_task(search_trader(session, tid))
+
         return available_trades

@@ -1,3 +1,4 @@
+import aiohttp
 import discord
 from discord.ext import commands
 import logging
@@ -30,36 +31,38 @@ async def on_ready():
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-def extract_moxfield_info(ctx):
+async def extract_moxfield_info(ctx):
     content = ctx.message.content
+    headers = {"User-Agent": "MtgDiscordTrading"}
 
-    binder_match = re.search(r'binders?/([A-Za-z0-9_-]+)', content)
-    if binder_match:
-        binder_id = binder_match.group(1)
-        try:
-            response = call_moxfield_api(moxfield_id=binder_id, moxfield_type="binder")
-        except Exception:
+    async with aiohttp.ClientSession(headers=headers) as session:
+        binder_match = re.search(r'binders?/([A-Za-z0-9_-]+)', content)
+        if binder_match:
+            binder_id = binder_match.group(1)
+            try:
+                response = await call_moxfield_api(session, moxfield_id=binder_id, moxfield_type="binder")
+            except Exception:
+                return None
+            if response and response.get('tradeBinder'):
+                return binder_id, "binder"
             return None
-        if response and response.get('tradeBinder'):
-            return binder_id, "binder"
-        return None
 
-    collection_match = re.search(r'(?:collection/)?([A-Za-z0-9_-]+)\/?$', content)
-    if collection_match:
-        collection_id = collection_match.group(1)
-        try:
-            response = call_moxfield_api(moxfield_id=collection_id)
-        except Exception:
+        collection_match = re.search(r'(?:collection/)?([A-Za-z0-9_-]+)\/?$', content)
+        if collection_match:
+            collection_id = collection_match.group(1)
+            try:
+                response = await call_moxfield_api(session, moxfield_id=collection_id)
+            except Exception:
+                return None
+            if response and response.get('data'):
+                return collection_id, "collection"
             return None
-        if response and response.get('data'):
-            return collection_id, "collection"
-        return None
 
     return None
 
 @bot.command()
 async def link_moxfield(ctx):
-    result = extract_moxfield_info(ctx)
+    result = await extract_moxfield_info(ctx)
     if not result:
         await ctx.send(f"Invalid moxfield collection or binder link or ID.")
         return
@@ -151,7 +154,7 @@ async def search(ctx):
 
     discord_ids = [str(member.id) for member in ctx.guild.members if member.id != ctx.author.id]
     
-    available_trades = trade_manager.search_for_card(card_name, discord_ids)
+    available_trades = await trade_manager.search_for_card(card_name, discord_ids)
 
     if collection_number:
         available_trades = filter_trades(available_trades, collection_number)
@@ -183,7 +186,7 @@ async def search_list(ctx):
 
     discord_ids = [str(member.id) for member in ctx.guild.members if member.id != ctx.author.id]
 
-    available_trades = trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
+    available_trades = await trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
     await ctx.send(generate_message_from_trades(available_trades))
 
@@ -197,7 +200,7 @@ async def search_self(ctx):
 
     discord_ids = [str(ctx.author.id)]
 
-    available_trades = trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
+    available_trades = await trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
 
     await ctx.send(generate_message_from_trades(available_trades))
 

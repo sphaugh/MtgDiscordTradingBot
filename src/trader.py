@@ -1,9 +1,7 @@
-import requests
+import aiohttp
 import logging
 import json
 from typing import Literal, NotRequired, TypedDict
-
-from curl_cffi import requests as curl_requests
 
 
 handler = logging.FileHandler(filename='app.log', encoding='utf-8', mode='w')
@@ -18,7 +16,7 @@ class TraderData(TypedDict):
     moxfield_id: str
     moxfield_type: NotRequired[MoxfieldType]
 
-def call_moxfield_api(moxfield_id: str, moxfield_type: MoxfieldType = "collection", params=None):
+async def call_moxfield_api(session: aiohttp.ClientSession, moxfield_id: str, moxfield_type: MoxfieldType = "collection", params=None):
 
     if moxfield_type == "binder":
         url = f"https://api2.moxfield.com/v1/trade-binders/{moxfield_id}/search"
@@ -26,24 +24,15 @@ def call_moxfield_api(moxfield_id: str, moxfield_type: MoxfieldType = "collectio
         url = f"https://api2.moxfield.com/v1/collections/search/{moxfield_id}"
 
     try:
-        response = curl_requests.get(
-            url,
-            headers={
-                "User-Agent": "MtgDiscordTrading",
-                "Host": "api2.moxfield.com",
-            },
-            params=params,
-            impersonate="chrome"
-        )
-        response.raise_for_status()  # Raises an HTTPError for bad responses
+        async with session.get(url, params=params) as response:
+            response.raise_for_status()
+            text = await response.text()
+            if not text:
+                logging.debug(f"Failed to call moxfield using collection id: {moxfield_id}")
+                return {}
+            return await response.json()
 
-        if not response.text:
-            logging.debug(f"Failed to call moxfield using collection id: {moxfield_id}")
-            return {}
-        else:
-            return response.json()
-
-    except requests.exceptions.RequestException as e:
+    except aiohttp.ClientError as e:
         raise Exception(f"Failed to fetch collection {moxfield_id}: {e}")
     except json.JSONDecodeError as e:
         raise Exception(f"Failed to parse JSON response for {moxfield_id}: {e}")
@@ -61,14 +50,14 @@ class Trader:
         self.moxfield_type: MoxfieldType = moxfield_type
 
     
-    def get_moxfield_session_id(self, card_name):
-        
+    async def get_moxfield_session_id(self, session: aiohttp.ClientSession, card_name):
+
         params = {
             "pageSize": 1,
             "q": card_name
         }
 
-        response = call_moxfield_api(moxfield_id=self.moxfield_id, moxfield_type=self.moxfield_type, params=params)
+        response = await call_moxfield_api(session=session, moxfield_id=self.moxfield_id, moxfield_type=self.moxfield_type, params=params)
 
         session_id = response.get("searchSessionId", None)
 
@@ -77,17 +66,17 @@ class Trader:
 
         return session_id
 
-    def search_moxfield(self, card_name):
+    async def search_moxfield(self, session: aiohttp.ClientSession, card_name):
 
-        session_id = self.get_moxfield_session_id(card_name)
-        
+        session_id = await self.get_moxfield_session_id(session, card_name)
+
         params = {
             "pageSize": 1000,
             "q": card_name,
             "searchSessionId": session_id
         }
 
-        response = call_moxfield_api(moxfield_id=self.moxfield_id, moxfield_type=self.moxfield_type, params=params)
+        response = await call_moxfield_api(session=session, moxfield_id=self.moxfield_id, moxfield_type=self.moxfield_type, params=params)
 
         # Filter all_data
         grouped_items = {}

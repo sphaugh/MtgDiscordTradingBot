@@ -1,6 +1,4 @@
-urllib3<2.0
-requests
+aiohttp
 discord.py
 python-dotenv
-curl-cffi
 pytest
