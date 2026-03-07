@@ -126,7 +126,7 @@ def parse_search_input(content: str) -> tuple[str, str | None]:
     start = content.find('{{')
     end = content.find('}}', start + 1)
     if start == -1 or end == -1 or start >= end:
-        raise ValueError("Invalid format. Use !search {{card_name | collection_number}} or !search {{card_name}}")
+        raise ValueError("Invalid format. Paste a Moxfield export line (e.g. `1 Counterspell (CMR) 632`), or use `!search {{card_name | collector_number}}`.")
 
     inner = content[start + 2:end]
     parts = inner.split('|', 1)
@@ -202,7 +202,7 @@ def parse_search_list_input(content: str) -> list[str]:
     start = content.find('{{')
     end = content.find('}}', start + 1)
     if start == -1 or end == -1 or start >= end:
-        raise ValueError("Invalid format. Use !search_list {{ card1 | card2 | card3 }}")
+        raise ValueError("Invalid format. Paste a Moxfield export (one card per line), or use `!search_list {{ card1 | card2 }}`.")
 
     inner = content[start + 2:end]
     parts = [p.strip(' []{}') for p in inner.split('|')]
