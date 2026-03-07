@@ -1,6 +1,3 @@
-from http import HTTPStatus
-
-from curl_cffi.requests import AsyncSession
 import discord
 from discord.ext import commands
 import logging
@@ -10,8 +7,7 @@ import re
 
 from models.moxfield_types import MoxfieldAsset
 from trade_manager import TradeManager
-from config import MOXFIELD_REFRESH_HOURS, TRADER_ROLE, USERS_FILE
-from trader import AvailableTrades, MoxfieldAsset, call_moxfield_api
+from trader import AvailableTrades, MoxfieldAsset, call_moxfield_api_sync
 
 HEADERS = {"User-Agent": "MtgDiscordTrading"}
 
@@ -42,7 +38,7 @@ async def on_member_join(member):
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-async def extract_moxfield_info(
+def extract_moxfield_info(
         ctx: commands.Context,
         moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION
     ) -> tuple[str, MoxfieldAsset] | None:
@@ -50,23 +46,21 @@ async def extract_moxfield_info(
     content = ctx.message.content
 
     regexes = {
-        MoxfieldAsset.BINDER: r'(?:binders?/)?([A-Za-z0-9_-]+)$',
+        MoxfieldAsset.BINDER: r'(?:binders?/)?([A-Za-z0-9_-]+)\/?$',
         MoxfieldAsset.DECK: r'(?:decks/)?([A-Za-z0-9_-]+)\/?$',
         MoxfieldAsset.COLLECTION: r'(?:collection/)?([A-Za-z0-9_-]+)\/?$'
     }
 
-    async with AsyncSession(impersonate="chrome", headers=HEADERS) as session:
-
-        match = re.search(regexes[moxfield_type], content)
-        if match:
-            id = match.group(1)
-            try:
-                response = await call_moxfield_api(session, moxfield_id=id, moxfield_type=moxfield_type)
-            except Exception:
-                return None
-            if response:
-                return id, moxfield_type
+    match = re.search(regexes[moxfield_type], content)
+    if match:
+        id = match.group(1)
+        try:
+            response = call_moxfield_api_sync(moxfield_id=id, moxfield_type=moxfield_type)
+        except Exception:
             return None
+        if response:
+            return id, moxfield_type
+        return None
 
     return None
 

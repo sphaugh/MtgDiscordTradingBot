@@ -1,4 +1,3 @@
-import asyncio
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,13 +15,13 @@ from models.moxfield_types import MoxfieldAsset
 def test_extract_moxfield_info_collection(message):
     ctx = MagicMock()
     ctx.message.content = message
-    assert asyncio.run(extract_moxfield_info(ctx, MoxfieldAsset.COLLECTION)) == ('Tn1Ta-3HsEKtpGYrJG_d6Q', MoxfieldAsset.COLLECTION)
+    assert extract_moxfield_info(ctx, MoxfieldAsset.COLLECTION) == ('Tn1Ta-3HsEKtpGYrJG_d6Q', MoxfieldAsset.COLLECTION)
 
 
 def test_extract_moxfield_info_collection_invalid():
     ctx = MagicMock()
     ctx.message.content = '!link_moxfield abcd1234'
-    assert not asyncio.run(extract_moxfield_info(ctx))
+    assert not extract_moxfield_info(ctx)
 
 
 @pytest.mark.parametrize("message", [
@@ -34,4 +33,4 @@ def test_extract_moxfield_info_collection_invalid():
 def test_extract_moxfield_info_binder(message):
     ctx = MagicMock()
     ctx.message.content = message
-    assert asyncio.run(extract_moxfield_info(ctx, MoxfieldAsset.BINDER)) == ('6fs4Mh8xUEScfzKmh0av6Q', MoxfieldAsset.BINDER)
+    assert extract_moxfield_info(ctx, MoxfieldAsset.BINDER) == ('6fs4Mh8xUEScfzKmh0av6Q', MoxfieldAsset.BINDER)
