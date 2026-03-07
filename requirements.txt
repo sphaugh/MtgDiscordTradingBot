@@ -1,6 +1,4 @@
-urllib3<2.0
-requests
+curl_cffi
 discord.py
 python-dotenv
-curl-cffi
 pytest
