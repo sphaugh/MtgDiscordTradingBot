@@ -1,9 +1,8 @@
-import asyncio
 import pytest
 import unittest
-from unittest.mock import MagicMock
 
-from main import extract_moxfield_info, filter_trades, generate_messages_from_lines, parse_search_input, parse_search_list_input
+from main import extract_moxfield_info, filter_trades, parse_search_input
+from main import parse_search_list_input
 from trader import AvailableTrades, CardEntry
 
 class TestSearchFunction(unittest.TestCase):
