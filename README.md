@@ -4,6 +4,11 @@ Discord bot to facilitate local trades for Magic the Gathering cards. Allows pla
 
 You can get a discord access token to host your own bot, or you can install the existing bot here: https://discord.com/oauth2/authorize?client_id=1445699447802826762
 
+# Testing
+* Set PYTHONPATH: `$env:PYTHONPATH = "{pwd}\src"`
+* Run tests: `python3 -m pytest src/test/<test_file_name>.py
+
+
 ## Instructions
 * Click share on Moxfield collection
 * Set Moxfield collection to public
