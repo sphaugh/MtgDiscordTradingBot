@@ -4,217 +4,71 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import unittest
 
-from main import filter_trades, generate_messages_from_lines, parse_search_input
-from main import parse_search_list_input, link_moxfield, search
+from main import generate_messages_from_lines, parse_search_input
+from main import link_moxfield, search, search_exact
+from decklist_parser import CardQuery
 from models.moxfield_types import MoxfieldAsset
-from trader import AvailableTrades, CardEntry
 
 class TestSearchFunction(unittest.TestCase):
 
-    def setUp(self):
-        """Set up test fixtures"""
-        self.example_available_trades: dict[str, CardEntry] = {
-            'yjpW2O1': {
-                'count': 4,
-                'name': 'Ponder',
-                'expansion': 'Tarkir: Dragonstorm Commander',
-                'scryfall_id': 'dc69f960-68ba-4315-8146-6a7a82047503',
-                'cn': '159'
-            },
-            'aQJlzZ9': {
-                'count': 1,
-                'name': 'Ponder',
-                'expansion': 'Duskmourn: House of Horror Commander',
-                'scryfall_id': '8cbab1d1-25cb-456f-8d1c-3d64eb7265ea',
-                'cn': '73'
-            },
-            'WalWzdG': {
-                'count': 1,
-                'name': 'Ponder',
-                'expansion': 'Lorwyn',
-                'scryfall_id': 'ba6b6fc5-5077-4812-b8e9-906783dbaf67',
-                'cn': '79'
-            }
-        }
+    def test_parse_search_single_card(self):
+        self.assertEqual(parse_search_input('1 Counterspell (CMR) 632'),
+                         [CardQuery('Counterspell', set_code='CMR', collector_number='632')])
 
-        self.second_user_trades: dict[str, CardEntry] = {
-            'bRnjVOg': {
-                'count': 1,
-                'name': 'Ponder',
-                'expansion': 'Secret Lair Promo',
-                'scryfall_id': 'cd165fe9-7de3-4883-a258-e397472db606',
-                'cn': '19'
-            },
-            'xRK4yrn': {
-                'count': 2,
-                'name': 'Ponder',
-                'expansion': 'New Capenna Commander',
-                'scryfall_id': '44dcfc0c-b23d-48be-bf3a-a6fc6806c5e1',
-                'cn': '229'
-            },
-            'xRK41BQ': {
-                'count': 1,
-                'name': 'Ponder',
-                'expansion': 'Commander 2018',
-                'scryfall_id': '91382955-bcfc-4fb6-8cce-dc107e5b4c32',
-                'cn': '96'
-            }
-        }
-
-        self.full_available_trades: AvailableTrades = {
-            'user1': self.example_available_trades,
-            '103193318623563776': self.second_user_trades
-        }
-
-    def test_search_by_collection_number_159(self):
-        """Test filtering trades by collection number 159"""
-        cn = '159'
-
-        filtered_trades = filter_trades(self.full_available_trades, cn)
-
-        # Should only contain user1 with the Tarkir: Dragonstorm Commander version
-        expected = {
-            'user1': {
-                'yjpW2O1': {
-                    'count': 4,
-                    'name': 'Ponder',
-                    'expansion': 'Tarkir: Dragonstorm Commander',
-                    'scryfall_id': 'dc69f960-68ba-4315-8146-6a7a82047503',
-                    'cn': '159'
-                }
-            }
-        }
-
-        self.assertEqual(filtered_trades, expected)
-
-    def test_search_by_collection_number_73(self):
-        """Test filtering trades by collection number 73"""
-        cn = '73'
-
-        filtered_trades = filter_trades(self.full_available_trades, cn)
-
-        # Should only contain user1 with the Duskmourn version
-        expected = {
-            'user1': {
-                'aQJlzZ9': {
-                    'count': 1,
-                    'name': 'Ponder',
-                    'expansion': 'Duskmourn: House of Horror Commander',
-                    'scryfall_id': '8cbab1d1-25cb-456f-8d1c-3d64eb7265ea',
-                    'cn': '73'
-                }
-            }
-        }
-
-        self.assertEqual(filtered_trades, expected)
-
-    def test_search_by_collection_number_19(self):
-        """Test filtering trades by collection number 19"""
-        cn = '19'
-
-        filtered_trades = filter_trades(self.full_available_trades, cn)
-
-        # Should only contain the second user with the Secret Lair Promo version
-        expected = {
-            '103193318623563776': {
-                'bRnjVOg': {
-                    'count': 1,
-                    'name': 'Ponder',
-                    'expansion': 'Secret Lair Promo',
-                    'scryfall_id': 'cd165fe9-7de3-4883-a258-e397472db606',
-                    'cn': '19'
-                }
-            }
-        }
-
-        self.assertEqual(filtered_trades, expected)
-
-    def test_search_by_nonexistent_collection_number(self):
-        """Test filtering by a collection number that doesn't exist"""
-        cn = '999'
-
-        filtered_trades = filter_trades(self.full_available_trades, cn)
-
-        # Should be empty
-        self.assertEqual(filtered_trades, {})
-
-    def test_parse_search_moxfield_format(self):
-        card_name, collection_number = parse_search_input('1 Counterspell (CMR) 632')
-        self.assertEqual(card_name, 'Counterspell')
-        self.assertEqual(collection_number, '632')
-
-    def test_parse_search_moxfield_format_no_set(self):
-        card_name, collection_number = parse_search_input('1 Sol Ring')
-        self.assertEqual(card_name, 'Sol Ring')
-        self.assertIsNone(collection_number)
-
-    def test_parse_search_moxfield_leading_zeros_stripped(self):
-        card_name, collection_number = parse_search_input('1 Ponder (M11) 076')
-        self.assertEqual(card_name, 'Ponder')
-        self.assertEqual(collection_number, '76')
-
-    def test_parse_search_moxfield_multi_card_raises(self):
-        with self.assertRaises(ValueError) as ctx:
-            parse_search_input('1 Sol Ring\n2 Lightning Bolt (M11) 149')
-        self.assertIn('!search_list', str(ctx.exception))
+    def test_parse_search_multiple_cards(self):
+        content = '1 Sol Ring\n2 Lightning Bolt (M11) 149\n1 Counterspell (CMR) 632'
+        self.assertEqual(parse_search_input(content), [
+            CardQuery('Sol Ring'),
+            CardQuery('Lightning Bolt', set_code='M11', collector_number='149'),
+            CardQuery('Counterspell', set_code='CMR', collector_number='632'),
+        ])
 
     def test_parse_search_no_args_raises(self):
         with self.assertRaises(ValueError):
             parse_search_input('')
 
-    def test_parse_search_list_moxfield_format(self):
-        content = '1 Sol Ring\n2 Lightning Bolt (M11) 149\n1 Counterspell (CMR) 632'
-        self.assertEqual(parse_search_list_input(content), ['Sol Ring', 'Lightning Bolt', 'Counterspell'])
+    def test_to_moxfield_query_name_only(self):
+        self.assertEqual(CardQuery('Sol Ring').to_moxfield_query(), '(Sol Ring)')
 
-    def test_parse_search_list_no_args_raises(self):
-        with self.assertRaises(ValueError):
-            parse_search_list_input('')
+    def test_to_moxfield_query_with_set_and_number(self):
+        self.assertEqual(CardQuery('Counterspell', set_code='CMR', collector_number='632').to_moxfield_query(), '(Counterspell set:CMR number:632)')
+
+    def test_to_moxfield_query_set_only(self):
+        self.assertEqual(CardQuery('Ponder', set_code='M11').to_moxfield_query(), '(Ponder set:M11)')
 
 
 class TestSearchCommand(unittest.TestCase):
 
-    def setUp(self):
-        self.all_trades: AvailableTrades = {
-            '123456789': {
-                'abc': {'count': 1, 'name': 'Ponder', 'expansion': 'Lorwyn', 'scryfall_id': 'aaa', 'cn': '79'},
-                'def': {'count': 2, 'name': 'Ponder', 'expansion': 'Magic 2011', 'scryfall_id': 'bbb', 'cn': '76'},
-            }
-        }
-
-    def test_search_filters_by_collector_number(self):
-        """!search with a collector number should filter to that exact printing."""
-        ctx = MagicMock()
-        ctx.message.content = '!search 1 Ponder (LRW) 79'
-        ctx.author.id = 999
-        ctx.guild.members = []
-        ctx.send = AsyncMock()
-
-        with patch('main.trade_manager') as mock_tm, patch('main.bot') as mock_bot:
-            mock_tm.search_for_card = AsyncMock(return_value=self.all_trades)
-            mock_bot.get_user.return_value = MagicMock(mention='@user1')
-
-            asyncio.run(search(ctx, content='1 Ponder (LRW) 79'))
-
-        sent = ''.join(call.args[0] for call in ctx.send.call_args_list)
-        self.assertIn('79', sent)
-        self.assertNotIn('76', sent)
-
-    def test_search_without_collector_number_returns_all_printings(self):
-        """!search without a collector number should return all printings."""
+    def _run_command(self, command, content: str) -> AsyncMock:
         ctx = MagicMock()
         ctx.author.id = 999
         ctx.guild.members = []
         ctx.send = AsyncMock()
+        mock_tm = MagicMock()
+        mock_tm.search_for_card = AsyncMock(return_value={})
+        with patch('main.trade_manager', mock_tm):
+            asyncio.run(command(ctx, content=content))
+        return mock_tm.search_for_card
 
-        with patch('main.trade_manager') as mock_tm, patch('main.bot') as mock_bot:
-            mock_tm.search_for_card = AsyncMock(return_value=self.all_trades)
-            mock_bot.get_user.return_value = MagicMock(mention='@user1')
+    def test_search_ignores_set_and_number(self):
+        """!search should query by name only, ignoring set and collector number."""
+        search_for_card = self._run_command(search, '1 Ponder (LRW) 79')
+        self.assertEqual(search_for_card.call_args.args[0], 'Ponder')
 
-            asyncio.run(search(ctx, content='1 Ponder'))
+    def test_search_multiple_cards(self):
+        """!search with multiple cards should join names with or."""
+        search_for_card = self._run_command(search, '1 Ponder\n1 Counterspell (CMR) 632')
+        self.assertEqual(search_for_card.call_args.args[0], 'Ponder or Counterspell')
 
-        sent = ''.join(call.args[0] for call in ctx.send.call_args_list)
-        self.assertIn('79', sent)
-        self.assertIn('76', sent)
+    def test_search_exact_passes_full_query(self):
+        """!search_exact should pass the full moxfield query including set and collector number."""
+        search_for_card = self._run_command(search_exact, '1 Ponder (LRW) 79')
+        self.assertEqual(search_for_card.call_args.args[0], '(Ponder set:LRW number:79)')
+
+    def test_search_exact_multiple_cards(self):
+        """!search_exact with multiple cards should join full queries with or."""
+        search_for_card = self._run_command(search_exact, '1 Ponder (LRW) 79\n1 Counterspell (CMR) 632')
+        self.assertEqual(search_for_card.call_args.args[0], '(Ponder set:LRW number:79) or (Counterspell set:CMR number:632)')
 
 
 @pytest.mark.parametrize(

@@ -16,6 +16,14 @@ class CardQuery:
     collector_number: str | None = None
     printing: Printing = Printing.Normal
 
+    def to_moxfield_query(self) -> str:
+        parts = [self.name]
+        if self.set_code:
+            parts.append(f'set:{self.set_code}')
+        if self.collector_number:
+            parts.append(f'number:{self.collector_number}')
+        return f'({" ".join(parts)})'
+
 
 _space = parsy.regex(r' +')
 _quantity = parsy.regex(r'\d+').map(int)
