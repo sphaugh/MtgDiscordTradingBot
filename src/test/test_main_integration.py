@@ -10,7 +10,6 @@ from models.moxfield_types import MoxfieldAsset
     '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q/',
     '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q',
     '!link_moxfield moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q',
-    '!link_moxfield Tn1Ta-3HsEKtpGYrJG_d6Q',
 ])
 def test_extract_moxfield_info_collection(message):
     ctx = MagicMock()
@@ -18,9 +17,13 @@ def test_extract_moxfield_info_collection(message):
     assert extract_moxfield_info(ctx, MoxfieldAsset.COLLECTION) == ('Tn1Ta-3HsEKtpGYrJG_d6Q', MoxfieldAsset.COLLECTION)
 
 
-def test_extract_moxfield_info_collection_invalid():
+@pytest.mark.parametrize("message", [
+    '!link_moxfield abcd1234',
+    '!link_moxfield Tn1Ta-3HsEKtpGYrJG_d6Q',
+])
+def test_extract_moxfield_info_collection_invalid(message):
     ctx = MagicMock()
-    ctx.message.content = '!link_moxfield abcd1234'
+    ctx.message.content = message
     with pytest.raises(ValueError):
         extract_moxfield_info(ctx)
 
@@ -29,7 +32,6 @@ def test_extract_moxfield_info_collection_invalid():
     '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
     '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q/',
     '!link_moxfield moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
-    '!link_moxfield 6fs4Mh8xUEScfzKmh0av6Q',
 ])
 def test_extract_moxfield_info_binder(message):
     ctx = MagicMock()

@@ -12,9 +12,7 @@ You can get a discord access token to host your own bot, or you can install the 
 ## Instructions
 * Click share on Moxfield collection
 * Set Moxfield collection to public
-* Use !link_moxfield <collection-id> to link your collection
-    * Use !link_moxfield to link collections
-    * Use !link_moxfield_binder to link binders
+* Use !link_moxfield <url> to link your collection or binder
 * Use !unlink_moxfield to remove your collection
 * Use !search to search for a single card in other people's collections
 * Use !search_list to search for a list of cards

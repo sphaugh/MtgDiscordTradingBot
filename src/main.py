@@ -87,11 +87,11 @@ async def _link_moxfield(ctx, moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLE
 
 @bot.command()
 async def link_moxfield(ctx):
-    await _link_moxfield(ctx, MoxfieldAsset.COLLECTION)
-    
-@bot.command()
-async def link_moxfield_binder(ctx):
-    await _link_moxfield(ctx, MoxfieldAsset.BINDER)
+
+    if MoxfieldAsset.BINDER.value in ctx.message.content:
+        await _link_moxfield(ctx, MoxfieldAsset.BINDER)
+    else:
+        await _link_moxfield(ctx, MoxfieldAsset.COLLECTION)
 
 @bot.command()
 async def unlink_moxfield(ctx):
