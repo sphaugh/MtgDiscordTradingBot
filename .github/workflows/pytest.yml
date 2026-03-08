@@ -25,4 +25,6 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run pytest
+      env:
+        DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
       run: pytest
