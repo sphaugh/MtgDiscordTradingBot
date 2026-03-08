@@ -138,15 +138,6 @@ class TestSearchFunction(unittest.TestCase):
         # Should be empty
         self.assertEqual(filtered_trades, {})
 
-    def test_parse_search(self):
-        card_name, collection_number = parse_search_input('{{ +2 mace }}')
-        self.assertEqual(card_name, '+2 mace')
-        self.assertIsNone(collection_number)
-
-        card_name, collection_number = parse_search_input('{{ Borrowing 100,000 arrows | 045 }}')
-        self.assertEqual(card_name, 'Borrowing 100,000 arrows')
-        self.assertEqual(collection_number, '45')
-
     def test_parse_search_moxfield_format(self):
         card_name, collection_number = parse_search_input('1 Counterspell (CMR) 632')
         self.assertEqual(card_name, 'Counterspell')
@@ -170,10 +161,6 @@ class TestSearchFunction(unittest.TestCase):
     def test_parse_search_no_args_raises(self):
         with self.assertRaises(ValueError):
             parse_search_input('')
-
-    def test_parse_search_list_input_complex(self):
-        result = parse_search_list_input('{{ +2 mace | _____ Goblin | _____ | TL;DR }}')
-        self.assertEqual(result, ['+2 mace', '_____ Goblin', '_____', 'TL;DR'])
 
     def test_parse_search_list_moxfield_format(self):
         content = '1 Sol Ring\n2 Lightning Bolt (M11) 149\n1 Counterspell (CMR) 632'

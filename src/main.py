@@ -4,7 +4,6 @@ import logging
 from dotenv import load_dotenv
 import os
 import re
-import parsy
 
 from models.moxfield_types import MoxfieldAsset
 from trade_manager import TradeManager
@@ -117,30 +116,14 @@ def parse_search_input(content: str) -> tuple[str, str | None]:
 
     Raises ValueError with a user-facing message when the input is invalid.
     """
-    try:
-        cards = parse_decklist(content)
-        if len(cards) == 1:
-            card = cards[0]
-            cn = card.collector_number.lstrip('0') if card.collector_number else None
-            return card.name, cn
-        elif len(cards) > 1:
-            raise ValueError("!search only supports a single card. Use !search_list for multiple cards.")
-    except parsy.ParseError:
-        logging.debug("Decklist parse failed, falling back to legacy format", exc_info=True)
-
-    start = content.find('{{')
-    end = content.find('}}', start + 1)
-    if start == -1 or end == -1 or start >= end:
-        raise ValueError("Invalid format. Paste a Moxfield export line (e.g. `1 Counterspell (CMR) 632`), or use `!search {{card_name | collector_number}}`.")
-
-    inner = content[start + 2:end]
-    parts = inner.split('|', 1)
-    card_name = parts[0].strip(' []{}')
-    if len(card_name) < 5:
-        raise ValueError("Please use a more specific query.")
-
-    collection_number = parts[1].strip().lstrip('0') if len(parts) > 1 else None
-    return card_name, collection_number
+    cards = parse_decklist(content)
+    if len(cards) == 1:
+        card = cards[0]
+        cn = card.collector_number.lstrip('0') if card.collector_number else None
+        return card.name, cn
+    elif len(cards) > 1:
+        raise ValueError("!search only supports a single card. Use !search_list for multiple cards.")
+    raise ValueError("Invalid format. Paste a Moxfield export line (e.g. `1 Counterspell (CMR) 632`).")
 
 def generate_messages_from_lines(lines: list[str], max_message_length: int = 2000) -> list[str]:
 
@@ -197,25 +180,10 @@ async def search(ctx, *, content=''):
         await ctx.send(message)
 
 def parse_search_list_input(content: str) -> list[str]:
-    try:
-        cards = parse_decklist(content)
-        if cards:
-            return [card.name for card in cards]
-    except Exception:
-        logging.debug("Decklist parse failed, falling back to legacy format", exc_info=True)
-
-    start = content.find('{{')
-    end = content.find('}}', start + 1)
-    if start == -1 or end == -1 or start >= end:
-        raise ValueError("Invalid format. Paste a Moxfield export (one card per line), or use `!search_list {{ card1 | card2 }}`.")
-
-    inner = content[start + 2:end]
-    parts = [p.strip(' []{}') for p in inner.split('|')]
-    # Ignore purely-numeric tokens (collection numbers) and empty parts
-    card_names = [p.strip() for p in parts]
-    if not card_names:
-        raise ValueError("No card names found. Use !search_list {{ card1 | card2 }}")
-    return card_names
+    cards = parse_decklist(content)
+    if cards:
+        return [card.name for card in cards]
+    raise ValueError("Invalid format. Paste a Moxfield export (one card per line).")
 
 
 @bot.command()
