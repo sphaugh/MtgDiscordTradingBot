@@ -64,3 +64,21 @@ def test_blank_lines_ignored():
         CardQuery("Sol Ring"),
         CardQuery("Lightning Bolt", "M11", "149"),
     ]
+    
+ def test_legacy_search():
+    text = "Sol Ring"
+    assert parse_decklist(text) == [CardQuery("Sol Ring")]
+
+def test_legacy_search_list():
+    text = "Sol Ring | Counterspell | Arcane Signet"
+    assert parse_decklist(text) == [
+        CardQuery("Sol Ring"),
+        CardQuery("Counterspell"),
+        CardQuery("Arcane Signet"),
+    ]
+
+def test_legacy_search_list_with_si():
+    text = "Sol Ring (C17) 223"
+    assert parse_decklist(text) == [
+        CardQuery("Sol Ring", set_code="C17", collector_number="223"),
+    ]

@@ -30,7 +30,7 @@ _quantity = parsy.regex(r'\d+').map(int)
 _set_code = parsy.string('(') >> parsy.regex(r'\w+') << parsy.string(')')
 _collector_number = parsy.regex(r'[\w★\-]+')
 _foil = parsy.string('*E*').result(Printing.EtchedFoil) | parsy.string('*F*').result(Printing.Foil)
-_name = parsy.regex(r'[^(\n*]+').map(str.strip)
+_name = parsy.regex(r'[^(\n*\|]+').map(str.strip)
 
 
 @parsy.generate
@@ -43,7 +43,8 @@ def _set_info():
 
 @parsy.generate
 def _card():
-    yield _quantity
+    yield _quantity.optional()
+    yield _space.optional()
     yield _space
     n = yield _name
     si = yield _set_info.optional()
@@ -63,4 +64,8 @@ _decklist = _line.sep_by(parsy.string('\n')).map(
 
 
 def parse_decklist(text: str) -> list[CardQuery]:
-    return _decklist.parse(text)
+    cleaned = "\n".join(
+        line for line in text.splitlines()
+        if not line.strip().startswith("@")
+    )
+    return _decklist.parse(cleaned)
