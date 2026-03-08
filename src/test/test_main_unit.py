@@ -153,36 +153,7 @@ class TestSearchFunction(unittest.TestCase):
         result = parse_search_list_input(message)
         expected = ['+2 mace', '_____ Goblin', '_____', 'TL;DR']
         self.assertEqual(result, expected)
-
-
-@pytest.mark.parametrize("message", [
-    '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q/',
-    '!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q',
-    '!link_moxfield moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q',
-    '!link_moxfield Tn1Ta-3HsEKtpGYrJG_d6Q',
-])
-def test_extract_moxfield_info_collection(message):
-    ctx = MagicMock()
-    ctx.message.content = message
-    assert extract_moxfield_info(ctx) == ('Tn1Ta-3HsEKtpGYrJG_d6Q', MoxfieldAsset.COLLECTION)
-
-
-def test_extract_moxfield_info_collection_invalid():
-    ctx = MagicMock()
-    ctx.message.content = '!link_moxfield abcd1234'
-    assert not extract_moxfield_info(ctx)
-
-
-@pytest.mark.parametrize("message", [
-    '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
-    '!link_moxfield https://moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q/',
-    '!link_moxfield moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q',
-    '6fs4Mh8xUEScfzKmh0av6Q'
-])
-def test_extract_moxfield_info_binder(message):
-    ctx = MagicMock()
-    ctx.message.content = message
-    assert extract_moxfield_info(ctx, MoxfieldAsset.BINDER) == ('6fs4Mh8xUEScfzKmh0av6Q', MoxfieldAsset.BINDER)
+        
 
 @pytest.mark.parametrize(
     ('lines', 'messages'),

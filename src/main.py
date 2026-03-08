@@ -24,6 +24,8 @@ trade_manager = TradeManager()
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+logger = logging.getLogger(__name__)
+
 @bot.event
 async def on_ready():
     
@@ -34,14 +36,10 @@ async def on_ready():
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-@bot.event
-async def on_member_join(member):
-    await member.send(f"Welcome to the server, {member.name}")
-
 def extract_moxfield_info(
         ctx: commands.Context,
         moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION
-    ) -> tuple[str, MoxfieldAsset] | None:
+    ) -> tuple[str, MoxfieldAsset]:
 
     content = ctx.message.content
 
@@ -56,19 +54,19 @@ def extract_moxfield_info(
         id = match.group(1)
         try:
             response = call_moxfield_api_sync(moxfield_id=id, moxfield_type=moxfield_type)
-        except Exception:
-            return None
+        except Exception as e:
+            logger.exception(f"Error calling moxfield API: {e}")
+            raise ValueError(f"Invalid moxfield {moxfield_type.value} ID: {id}")
         if response:
             return id, moxfield_type
-        return None
-
-    return None
+    raise ValueError(f"Could not extract moxfield {moxfield_type.value} ID from message")
 
 
 async def _link_moxfield(ctx, moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION):
-    moxfield_id, moxfield_type = extract_moxfield_info(ctx, moxfield_type)
-    if not moxfield_id:
-        await ctx.send(f"Invalid moxfield {moxfield_type.value} link or ID.")
+    try:
+        moxfield_id, moxfield_type = extract_moxfield_info(ctx, moxfield_type)
+    except ValueError as e:
+        await ctx.send(str(e))
         return
     
     discord_id = str(ctx.author.id)

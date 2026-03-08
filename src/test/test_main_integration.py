@@ -21,7 +21,8 @@ def test_extract_moxfield_info_collection(message):
 def test_extract_moxfield_info_collection_invalid():
     ctx = MagicMock()
     ctx.message.content = '!link_moxfield abcd1234'
-    assert not extract_moxfield_info(ctx)
+    with pytest.raises(ValueError):
+        extract_moxfield_info(ctx)
 
 
 @pytest.mark.parametrize("message", [
