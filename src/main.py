@@ -34,10 +34,6 @@ async def on_ready():
 async def on_member_join(member):
     await member.send(f"Welcome to the server, {member.name}")
 
-@bot.event
-async def on_member_join(member):
-    await member.send(f"Welcome to the server, {member.name}")
-
 def extract_moxfield_info(
         ctx: commands.Context,
         moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION
