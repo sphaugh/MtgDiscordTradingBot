@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 import logging
@@ -7,9 +8,8 @@ import re
 
 from models.moxfield_types import MoxfieldAsset
 from trade_manager import TradeManager
-from trader import AvailableTrades, MoxfieldAsset, call_moxfield_api_sync
-
-HEADERS = {"User-Agent": "MtgDiscordTrading"}
+from trader import AvailableTrades, CardEntry, call_moxfield_api_sync
+from decklist_parser import CardQuery, Printing, parse_decklist
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -68,7 +68,7 @@ async def _link_moxfield(ctx, moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLE
     except ValueError as e:
         await ctx.send(str(e))
         return
-    
+
     discord_id = str(ctx.author.id)
 
     if discord_id not in trade_manager.traders:
@@ -102,34 +102,12 @@ async def unlink_moxfield(ctx):
     else:
         await ctx.send(f"{ctx.author.mention} has no linked moxfield collection.")
 
-def filter_trades(available_trades: AvailableTrades, collection_number: str) -> AvailableTrades:
-    # Filter trades to only include cards with matching collector number
-        filtered_trades = {}
-        for discord_id, cards in available_trades.items():
-            matching_cards = {card_id: card for card_id, card in cards.items() if str(card.get('cn', '')) == collection_number}
-            if matching_cards:
-                filtered_trades[discord_id] = matching_cards
-        return filtered_trades
-
-
-def parse_search_input(message: str) -> tuple[str, str | None]:
-    """Parse the search input and return (card_name, collection_number|None).
-
-    Raises ValueError with a user-facing message when the input is invalid.
-    """
-    start = message.find('{{')
-    end = message.find('}}', start + 1)
-    if start == -1 or end == -1 or start >= end:
-        raise ValueError("Invalid format. Use !search {{card_name | collection_number}} or !search {{card_name}}")
-
-    inner = message[start + 2:end]
-    parts = inner.split('|', 1)
-    card_name = parts[0].strip(' []{}')
-    if len(card_name) < 5:
-        raise ValueError("Please use a more specific query.")
-
-    collection_number = parts[1].strip().lstrip('0') if len(parts) > 1 else None
-    return card_name, collection_number
+def parse_search_input(content: str) -> list[CardQuery]:
+    """Parse search input into a list of cards. Raises ValueError when the input is invalid."""
+    cards = parse_decklist(content)
+    if cards:
+        return cards
+    raise ValueError("Invalid format. Paste a Moxfield export (e.g. `1 Counterspell (CMR) 632`).")
 
 def generate_messages_from_lines(lines: list[str], max_message_length: int = 2000) -> list[str]:
 
@@ -167,65 +145,74 @@ def generate_message_from_trades(available_trades: AvailableTrades, max_message_
 
     return generate_messages_from_lines(lines, max_message_length)
 
+_FINISH = {
+    Printing.Normal: 'nonFoil',
+    Printing.Foil: 'foil',
+    Printing.EtchedFoil: 'etched',
+}
+
+async def _exact_search(cards: list[CardQuery], discord_ids: set[str]) -> AvailableTrades:
+    partitions: dict[Printing, list[CardQuery]] = {}
+    for card in cards:
+        partitions.setdefault(card.printing, []).append(card)
+
+    tasks: list[asyncio.Task[AvailableTrades]] = []
+    async with asyncio.TaskGroup() as group:
+        for printing, partition in partitions.items():
+            query = ' or '.join(card.to_moxfield_query() for card in partition)
+            tasks.append(group.create_task(
+                trade_manager.search_for_card(query, discord_ids, finish=_FINISH[printing])
+            ))
+
+    merged: dict[str, dict[str, CardEntry]] = {}
+    for task in tasks:
+        for discord_id, found in task.result().items():
+            merged.setdefault(discord_id, {}).update(found)
+    return merged
+
 @bot.command()
-async def search(ctx):
+async def search(ctx, *, content=''):
     try:
-        card_name, collection_number = parse_search_input(ctx.message.content)
+        cards = parse_search_input(content)
     except ValueError as e:
         await ctx.send(str(e))
         return
 
     discord_ids = {str(member.id) for member in ctx.guild.members if member.id != ctx.author.id}
 
-    available_trades = await trade_manager.search_for_card(card_name, discord_ids)
-
-    if collection_number:
-        available_trades = filter_trades(available_trades, collection_number)
+    query = ' or '.join(card.name for card in cards)
+    available_trades = await trade_manager.search_for_card(query, discord_ids)
 
     for message in generate_message_from_trades(available_trades):
         await ctx.send(message)
 
-def parse_search_list_input(message: str) -> list[str]:
-    start = message.find('{{')
-    end = message.find('}}', start + 1)
-    if start == -1 or end == -1 or start >= end:
-        raise ValueError("Invalid format. Use !search_list {{ card1 | card2 | card3 }}")
-
-    inner = message[start + 2:end]
-    parts = [p.strip(' []{}') for p in inner.split('|')]
-    # Ignore purely-numeric tokens (collection numbers) and empty parts
-    card_names = [p.strip() for p in parts]
-    if not card_names:
-        raise ValueError("No card names found. Use !search_list {{ card1 | card2 }}")
-    return card_names
-
-
 @bot.command()
-async def search_list(ctx):
+async def search_exact(ctx, *, content=''):
     try:
-        card_names = parse_search_list_input(ctx.message.content)
+        cards = parse_search_input(content)
     except ValueError as e:
         await ctx.send(str(e))
         return
 
     discord_ids = {str(member.id) for member in ctx.guild.members if member.id != ctx.author.id}
 
-    available_trades = await trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
+    available_trades = await _exact_search(cards, discord_ids)
 
     for message in generate_message_from_trades(available_trades):
         await ctx.send(message)
 
 @bot.command()
-async def search_self(ctx):
+async def search_self(ctx, *, content=''):
     try:
-        card_names = parse_search_list_input(ctx.message.content)
+        cards = parse_search_input(content)
     except ValueError as e:
         await ctx.send(str(e))
         return
 
     discord_ids = {str(ctx.author.id)}
 
-    available_trades = await trade_manager.search_for_card(' or '.join([f'{name}' for name in card_names]), discord_ids)
+    query = ' or '.join(card.name for card in cards)
+    available_trades = await trade_manager.search_for_card(query, discord_ids)
 
     for message in generate_message_from_trades(available_trades):
         await ctx.send(message)

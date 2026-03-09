@@ -1,159 +1,87 @@
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import unittest
 
-from main import filter_trades, generate_messages_from_lines, parse_search_input
-from main import parse_search_list_input, link_moxfield
+from main import generate_messages_from_lines, parse_search_input
+from main import link_moxfield, search, search_exact
+from decklist_parser import CardQuery, Printing
 from models.moxfield_types import MoxfieldAsset
-from trader import AvailableTrades, CardEntry
 
 class TestSearchFunction(unittest.TestCase):
 
-    def setUp(self):
-        """Set up test fixtures"""
-        self.example_available_trades: dict[str, CardEntry] = {
-            'yjpW2O1': {
-                'count': 4,
-                'name': 'Ponder',
-                'expansion': 'Tarkir: Dragonstorm Commander',
-                'scryfall_id': 'dc69f960-68ba-4315-8146-6a7a82047503',
-                'cn': '159'
-            },
-            'aQJlzZ9': {
-                'count': 1,
-                'name': 'Ponder',
-                'expansion': 'Duskmourn: House of Horror Commander',
-                'scryfall_id': '8cbab1d1-25cb-456f-8d1c-3d64eb7265ea',
-                'cn': '73'
-            },
-            'WalWzdG': {
-                'count': 1,
-                'name': 'Ponder',
-                'expansion': 'Lorwyn',
-                'scryfall_id': 'ba6b6fc5-5077-4812-b8e9-906783dbaf67',
-                'cn': '79'
-            }
-        }
+    def test_parse_search_single_card(self):
+        self.assertEqual(parse_search_input('1 Counterspell (CMR) 632'),
+                         [CardQuery('Counterspell', set_code='CMR', collector_number='632')])
 
-        self.second_user_trades: dict[str, CardEntry] = {
-            'bRnjVOg': {
-                'count': 1,
-                'name': 'Ponder',
-                'expansion': 'Secret Lair Promo',
-                'scryfall_id': 'cd165fe9-7de3-4883-a258-e397472db606',
-                'cn': '19'
-            },
-            'xRK4yrn': {
-                'count': 2,
-                'name': 'Ponder',
-                'expansion': 'New Capenna Commander',
-                'scryfall_id': '44dcfc0c-b23d-48be-bf3a-a6fc6806c5e1',
-                'cn': '229'
-            },
-            'xRK41BQ': {
-                'count': 1,
-                'name': 'Ponder',
-                'expansion': 'Commander 2018',
-                'scryfall_id': '91382955-bcfc-4fb6-8cce-dc107e5b4c32',
-                'cn': '96'
-            }
-        }
+    def test_parse_search_multiple_cards(self):
+        content = '1 Sol Ring\n2 Lightning Bolt (M11) 149\n1 Counterspell (CMR) 632'
+        self.assertEqual(parse_search_input(content), [
+            CardQuery('Sol Ring'),
+            CardQuery('Lightning Bolt', set_code='M11', collector_number='149'),
+            CardQuery('Counterspell', set_code='CMR', collector_number='632'),
+        ])
 
-        self.full_available_trades: AvailableTrades = {
-            'user1': self.example_available_trades,
-            '103193318623563776': self.second_user_trades
-        }
+    def test_parse_search_no_args_raises(self):
+        with self.assertRaises(ValueError):
+            parse_search_input('')
 
-    def test_search_by_collection_number_159(self):
-        """Test filtering trades by collection number 159"""
-        cn = '159'
+    def test_to_moxfield_query_name_only(self):
+        self.assertEqual(CardQuery('Sol Ring').to_moxfield_query(), '(Sol Ring)')
 
-        filtered_trades = filter_trades(self.full_available_trades, cn)
+    def test_to_moxfield_query_with_set_and_number(self):
+        self.assertEqual(CardQuery('Counterspell', set_code='CMR', collector_number='632').to_moxfield_query(), '(Counterspell set:CMR number:632)')
 
-        # Should only contain user1 with the Tarkir: Dragonstorm Commander version
-        expected = {
-            'user1': {
-                'yjpW2O1': {
-                    'count': 4,
-                    'name': 'Ponder',
-                    'expansion': 'Tarkir: Dragonstorm Commander',
-                    'scryfall_id': 'dc69f960-68ba-4315-8146-6a7a82047503',
-                    'cn': '159'
-                }
-            }
-        }
+    def test_to_moxfield_query_set_only(self):
+        self.assertEqual(CardQuery('Ponder', set_code='M11').to_moxfield_query(), '(Ponder set:M11)')
 
-        self.assertEqual(filtered_trades, expected)
 
-    def test_search_by_collection_number_73(self):
-        """Test filtering trades by collection number 73"""
-        cn = '73'
+class TestSearchCommand(unittest.TestCase):
 
-        filtered_trades = filter_trades(self.full_available_trades, cn)
+    def _run_command(self, command, content: str) -> AsyncMock:
+        ctx = MagicMock()
+        ctx.author.id = 999
+        ctx.guild.members = []
+        ctx.send = AsyncMock()
+        mock_tm = MagicMock()
+        mock_tm.search_for_card = AsyncMock(return_value={})
+        with patch('main.trade_manager', mock_tm):
+            asyncio.run(command(ctx, content=content))
+        return mock_tm.search_for_card
 
-        # Should only contain user1 with the Duskmourn version
-        expected = {
-            'user1': {
-                'aQJlzZ9': {
-                    'count': 1,
-                    'name': 'Ponder',
-                    'expansion': 'Duskmourn: House of Horror Commander',
-                    'scryfall_id': '8cbab1d1-25cb-456f-8d1c-3d64eb7265ea',
-                    'cn': '73'
-                }
-            }
-        }
+    def test_search_ignores_set_and_number(self):
+        """!search should query by name only, ignoring set and collector number."""
+        search_for_card = self._run_command(search, '1 Ponder (LRW) 79')
+        self.assertEqual(search_for_card.call_args.args[0], 'Ponder')
 
-        self.assertEqual(filtered_trades, expected)
+    def test_search_multiple_cards(self):
+        """!search with multiple cards should join names with or."""
+        search_for_card = self._run_command(search, '1 Ponder\n1 Counterspell (CMR) 632')
+        self.assertEqual(search_for_card.call_args.args[0], 'Ponder or Counterspell')
 
-    def test_search_by_collection_number_19(self):
-        """Test filtering trades by collection number 19"""
-        cn = '19'
+    def test_search_exact_passes_full_query_and_finish(self):
+        """!search_exact should pass the full moxfield query and nonFoil finish for normal cards."""
+        search_for_card = self._run_command(search_exact, '1 Ponder (LRW) 79')
+        self.assertEqual(search_for_card.call_args.args[0], '(Ponder set:LRW number:79)')
+        self.assertEqual(search_for_card.call_args.kwargs['finish'], 'nonFoil')
 
-        filtered_trades = filter_trades(self.full_available_trades, cn)
+    def test_search_exact_foil(self):
+        """!search_exact with *F* should use foil finish."""
+        search_for_card = self._run_command(search_exact, '1 Ponder (LRW) 79 *F*')
+        self.assertEqual(search_for_card.call_args.kwargs['finish'], 'foil')
 
-        # Should only contain the second user with the Secret Lair Promo version
-        expected = {
-            '103193318623563776': {
-                'bRnjVOg': {
-                    'count': 1,
-                    'name': 'Ponder',
-                    'expansion': 'Secret Lair Promo',
-                    'scryfall_id': 'cd165fe9-7de3-4883-a258-e397472db606',
-                    'cn': '19'
-                }
-            }
-        }
+    def test_search_exact_etched(self):
+        """!search_exact with *E* should use etched finish."""
+        search_for_card = self._run_command(search_exact, '1 Sol Ring (SLC) 27 *E*')
+        self.assertEqual(search_for_card.call_args.kwargs['finish'], 'etched')
 
-        self.assertEqual(filtered_trades, expected)
-
-    def test_search_by_nonexistent_collection_number(self):
-        """Test filtering by a collection number that doesn't exist"""
-        cn = '999'
-
-        filtered_trades = filter_trades(self.full_available_trades, cn)
-
-        # Should be empty
-        self.assertEqual(filtered_trades, {})
-
-    def test_parse_search(self):
-        message = '!search {{ +2 mace }}'
-        card_name, collection_number = parse_search_input(message)
-        self.assertEqual(card_name, '+2 mace')
-        self.assertIsNone(collection_number)
-
-        message = '!search {{ Borrowing 100,000 arrows | 045 }}'
-        card_name, collection_number = parse_search_input(message)
-        self.assertEqual(card_name, 'Borrowing 100,000 arrows')
-        self.assertEqual(collection_number, '45')
-
-    def test_parse_search_list_input_complex(self):
-        message = '!search_list {{ +2 mace | _____ Goblin | _____ | TL;DR }}'
-        result = parse_search_list_input(message)
-        expected = ['+2 mace', '_____ Goblin', '_____', 'TL;DR']
-        self.assertEqual(result, expected)
+    def test_search_exact_partitions_by_finish(self):
+        """!search_exact with mixed finishes should make one call per finish type."""
+        search_for_card = self._run_command(search_exact, '1 Ponder (LRW) 79\n1 Counterspell (CMR) 632 *F*')
+        self.assertEqual(search_for_card.call_count, 2)
+        finishes = {call.kwargs['finish'] for call in search_for_card.call_args_list}
+        self.assertEqual(finishes, {'nonFoil', 'foil'})
 
 
 @pytest.mark.parametrize(

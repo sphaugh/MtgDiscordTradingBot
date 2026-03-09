@@ -1,23 +1,63 @@
 # MtgDiscordTradingBot
 
-Discord bot to facilitate local trades for Magic the Gathering cards. Allows players to link their [moxfield collections](https://moxfield.com/collection) and search other players' collections.
+A Discord bot for facilitating local Magic: the Gathering trades. Players link their [Moxfield][moxfield-collection] collections or binders and search each other's inventory directly from Discord.
 
-You can get a discord access token to host your own bot, or you can install the existing bot here: https://discord.com/oauth2/authorize?client_id=1445699447802826762
+You can [add the bot to your server][bot-invite], or host your own using the instructions below.
 
-# Testing
-* Set PYTHONPATH: `$env:PYTHONPATH = "{pwd}\src"`
-* Run tests: `python3 -m pytest src/test/<test_file_name>.py
+## Setup
 
+1. [Create a Discord bot][discord-dev] and copy the token into a `.env` file:
+   ```
+   DISCORD_TOKEN=your_token_here
+   ```
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run: `python3 src/main.py`
 
-## Instructions
-* Click share on Moxfield collection
-* Set Moxfield collection to public
-* Use `!link_moxfield <url>` to link your collection or binder
-* Use `!unlink_moxfield` to remove your collection
-* Use `!search {{ <card_name> }}` to search for a single card in other people's collections
-* Use `!search_list {{ <card_name1> | <card_name2> }}` to search for a list of cards
-* Use `!search_self {{ <card_name1> | <card_name2> }}` to search your own collection
+## Commands
 
-<img width="2183" height="905" alt="image" src="https://github.com/user-attachments/assets/2c2da1b1-a37e-4f77-a733-a0880b7c36e0" />
+| Command                | Description                              |
+|------------------------|------------------------------------------|
+| `!link_moxfield <url>` | Link your Moxfield collection or binder  |
+| `!unlink_moxfield`     | Unlink your collection                   |
+| `!search`              | Search other members' collections by name|
+| `!search_exact`        | Search for specific printings            |
+| `!search_self`         | Search your own collection               |
 
-<img width="708" height="452" alt="image" src="https://github.com/user-attachments/assets/0d709c1d-8f83-4a5b-bb0f-bd4e54e75e91" />
+To link a collection, set it to public on Moxfield (**Share → Public**), then paste the URL:
+```
+!link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q
+!link_moxfield https://www.moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q
+```
+
+## Searching
+
+Paste one or more lines directly from a [Moxfield export][moxfield-collection]. Set codes and collector numbers are accepted but ignored — results include all printings:
+
+```
+!search 1 Sol Ring
+1 Teval, Arbiter of Virtue
+1 Agadeem's Awakening / Agadeem, the Undercrypt
+```
+
+## Advanced Searching
+
+Use `!search_exact` to match specific printings. Foil finish is respected — cards without a foil marker (`*F*` / `*E*`) are treated as non-foil. Cards without a set code or collector number fall back to a name-only search:
+
+```
+!search_exact 1 Sol Ring
+1 Teval, Arbiter of Virtue (TDM) 373 *F*
+1 Agadeem's Awakening / Agadeem, the Undercrypt (ZNR) 90
+```
+
+## Development
+
+**Requirements:** Python 3.11+
+
+Run all tests:
+```bash
+pytest
+```
+
+[discord-dev]: https://discord.com/developers/applications
+[bot-invite]: https://discord.com/oauth2/authorize?client_id=1445699447802826762
+[moxfield-collection]: https://www.moxfield.com/collection
