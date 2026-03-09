@@ -10,7 +10,7 @@ fi
 source venv/bin/activate
 
 # Install requirements
-python3 -m pip install -r requirements.txt
+sudo venv/bin/python3 -m pip install -r requirements.txt
 
 # Change into src and run main.py in a detached tmux session
 cd src
