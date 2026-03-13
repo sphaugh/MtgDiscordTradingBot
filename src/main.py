@@ -114,7 +114,7 @@ async def unlink_wishlist(ctx: commands.Context):
     except TraderNotFound:
         await ctx.send(f"{ctx.author.mention} must link a Moxfield collection first with !link_moxfield.")
         return
-    if not removed:
+    if removed:
         await ctx.send(f"{ctx.author.mention} wishlist has been unlinked.")
     else:
         await ctx.send(f"{ctx.author.mention} has no linked wishlist.")
