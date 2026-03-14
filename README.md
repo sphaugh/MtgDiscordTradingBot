@@ -62,7 +62,6 @@ Run all tests:
 ```bash
 pytest
 ```
-
 [discord-dev]: https://discord.com/developers/applications
 [bot-invite]: https://discord.com/oauth2/authorize?client_id=1445699447802826762
 [moxfield-collection]: https://www.moxfield.com/collection

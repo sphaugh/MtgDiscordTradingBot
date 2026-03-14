@@ -16,4 +16,3 @@ def test_get_decklist_export():
     """.strip()
 
     assert set([c.name for c in parse_decklist(actual_export)]) == set([c.name for c in parse_decklist(expected_export)])
-    

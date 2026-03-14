@@ -46,4 +46,3 @@ def test_extract_moxfield_info_deck(message):
     ctx = MagicMock()
     ctx.message.content = message
     assert extract_moxfield_info(ctx, MoxfieldAsset.DECK) == ('ugc1TPPrMkWgfndRILegww', MoxfieldAsset.DECK)
-    
