@@ -14,8 +14,6 @@ def get_moxfield_url(moxfield_id: str, moxfield_type: MoxfieldAsset) -> str:
             return f'https://api2.moxfield.com/v2/decks/all/{moxfield_id}'
         case MoxfieldAsset.COLLECTION:
             return f'https://api2.moxfield.com/v1/collections/search/{moxfield_id}'
-        case _:
-            return f'https://api2.moxfield.com/v1/collections/search/{moxfield_id}'
 
 def call_moxfield_api_sync(
     moxfield_id: str,
