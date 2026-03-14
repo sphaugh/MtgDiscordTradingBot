@@ -90,3 +90,4 @@ class Trader:
                 grouped_items[id]["count"] += quantity
 
         return grouped_items
+    
