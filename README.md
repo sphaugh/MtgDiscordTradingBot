@@ -30,6 +30,9 @@ To link a collection, set it to public on Moxfield (**Share → Public**), then 
 !link_moxfield https://www.moxfield.com/collection/Tn1Ta-3HsEKtpGYrJG_d6Q
 !link_moxfield https://www.moxfield.com/binders/6fs4Mh8xUEScfzKmh0av6Q
 ```
+![share collection](https://media.discordapp.net/attachments/1474488801727349032/1474489138270048502/image.png?ex=69b660c5&is=69b50f45&hm=f2b9d244f8753defaf3875b91ad565686aed9442d178099af768f01eaf0f6b61&=&format=webp&quality=lossless&width=2370&height=983)
+
+![set visibility](https://media.discordapp.net/attachments/1474488801727349032/1474489138911772766/image.png?ex=69b660c5&is=69b50f45&hm=9fabdfce3baf190746364c481e2f5ad6c1068cf983404297d41e6ef1011c3fc6&=&format=webp&quality=lossless&width=885&height=565)
 
 ## Searching
 
