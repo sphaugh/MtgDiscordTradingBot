@@ -8,7 +8,8 @@ import re
 
 from models.moxfield_types import MoxfieldAsset
 from trade_manager import TradeManager
-from trader import AvailableTrades, CardEntry, call_moxfield_api_sync
+from trader import AvailableTrades, CardEntry
+from moxfield_api import call_moxfield_api_sync, get_decklist_export
 from decklist_parser import CardQuery, Printing, parse_decklist
 
 load_dotenv()
@@ -138,15 +139,6 @@ def generate_message_from_trades(available_trades: AvailableTrades, max_message_
             continue
         lines.append(f"{discord_user.mention} has available trades: \n")
         cards = available_trades[discord_id]
-        
-        # Check if adding user header would exceed limit
-        if current_message and len(current_message) + len(user_header) > 2000:
-            messages.append(current_message)
-            current_message = user_header
-        else:
-            current_message += user_header
-        
-        # Add each card
         for card_id in cards:
             card = cards[card_id]
             lines.append(f"{card['count']} copies of {{ {card['name']} \\| #{card['cn']} \\| {card['expansion']} }} .\n")
@@ -179,8 +171,7 @@ async def _exact_search(cards: list[CardQuery], discord_ids: set[str]) -> Availa
             merged.setdefault(discord_id, {}).update(found)
     return merged
 
-@bot.command()
-async def search(ctx, *, content=''):
+async def _search_impl(ctx, *, content=''):
     try:
         cards = parse_search_input(content)
     except ValueError as e:
@@ -195,8 +186,7 @@ async def search(ctx, *, content=''):
     for message in generate_message_from_trades(available_trades):
         await ctx.send(message)
 
-@bot.command()
-async def search_exact(ctx, *, content=''):
+async def _search_exact_impl(ctx, *, content=''):
     try:
         cards = parse_search_input(content)
     except ValueError as e:
@@ -209,6 +199,26 @@ async def search_exact(ctx, *, content=''):
 
     for message in generate_message_from_trades(available_trades):
         await ctx.send(message)
+
+@bot.command()
+async def search(ctx, *, content=''):
+    await _search_impl(ctx=ctx, content=content)
+
+@bot.command()
+async def search_exact(ctx, *, content=''):
+    await _search_exact_impl(ctx=ctx, content=content)
+
+@bot.command()
+async def search_deck(ctx):
+    deck_id, _ = extract_moxfield_info(ctx, MoxfieldAsset.DECK)
+    exported_cards = get_decklist_export(deck_id)
+    await _search_impl(ctx=ctx, content=exported_cards)
+
+@bot.command()
+async def search_deck_exact(ctx):
+    deck_id, _ = extract_moxfield_info(ctx, MoxfieldAsset.DECK)
+    exported_cards = get_decklist_export(deck_id)
+    await _search_exact_impl(ctx=ctx, content=exported_cards)
 
 @bot.command()
 async def search_self(ctx, *, content=''):
@@ -228,5 +238,3 @@ async def search_self(ctx, *, content=''):
 
 if __name__ == "__main__":
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)
-
-        
