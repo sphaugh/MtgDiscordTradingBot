@@ -173,6 +173,9 @@ async def _search_impl(ctx: commands.Context, *, content: str = '') -> None:
         await ctx.send(str(e))
         return
 
+    if not ctx.guild:
+        raise ValueError("No guild in current context")
+
     discord_ids = {str(member.id) for member in ctx.guild.members if member.id != ctx.author.id}
     available_trades = await trade_manager.fuzzy_search(cards, discord_ids)
 
@@ -185,6 +188,9 @@ async def _search_exact_impl(ctx: commands.Context, *, content: str = '') -> Non
     except ValueError as e:
         await ctx.send(str(e))
         return
+
+    if not ctx.guild:
+        raise ValueError("No guild in current context")
 
     discord_ids = {str(member.id) for member in ctx.guild.members if member.id != ctx.author.id}
     available_trades = await trade_manager.exact_search(cards, discord_ids)
