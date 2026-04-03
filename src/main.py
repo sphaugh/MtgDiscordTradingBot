@@ -27,13 +27,13 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 logger = logging.getLogger(__name__)
 
 @bot.event
-async def on_ready():
-    
+async def on_ready() -> None:
+
     assert bot.user is not None
     print(f"We are ready to go, {bot.user.name}")
 
 @bot.event
-async def on_member_join(member):
+async def on_member_join(member: discord.Member) -> None:
     await member.send(f"Welcome to the server, {member.name}")
 
 def extract_moxfield_info(
@@ -62,7 +62,7 @@ def extract_moxfield_info(
     raise ValueError(f"Could not extract moxfield {moxfield_type.value} ID from message")
 
 
-async def _link_moxfield(ctx, moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION):
+async def _link_moxfield(ctx: commands.Context, moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLECTION) -> None:
     try:
         moxfield_id, moxfield_type = extract_moxfield_info(ctx, moxfield_type)
     except ValueError as e:
@@ -74,7 +74,7 @@ async def _link_moxfield(ctx, moxfield_type: MoxfieldAsset = MoxfieldAsset.COLLE
     await ctx.send(f"{ctx.author.mention} has been added with moxfield {moxfield_type.value} id: {moxfield_id}")
 
 @bot.command()
-async def link_moxfield(ctx):
+async def link_moxfield(ctx: commands.Context) -> None:
 
     if MoxfieldAsset.BINDER.value in ctx.message.content:
         await _link_moxfield(ctx, MoxfieldAsset.BINDER)
@@ -82,7 +82,7 @@ async def link_moxfield(ctx):
         await _link_moxfield(ctx, MoxfieldAsset.COLLECTION)
 
 @bot.command()
-async def unlink_moxfield(ctx):
+async def unlink_moxfield(ctx: commands.Context) -> None:
     discord_id = str(ctx.author.id)
     removed = trade_manager.remove_trader(discord_id)
     if removed:
@@ -91,7 +91,7 @@ async def unlink_moxfield(ctx):
         await ctx.send(f"{ctx.author.mention} has no linked moxfield collection.")
 
 @bot.command()
-async def link_wishlist(ctx: commands.Context):
+async def link_wishlist(ctx: commands.Context) -> None:
     discord_id = str(ctx.author.id)
 
     try:
@@ -106,7 +106,7 @@ async def link_wishlist(ctx: commands.Context):
     await ctx.send(f"{ctx.author.mention} wishlist linked: {trader.wishlist_url}")
 
 @bot.command()
-async def unlink_wishlist(ctx: commands.Context):
+async def unlink_wishlist(ctx: commands.Context) -> None:
     discord_id = str(ctx.author.id)
 
     try:
@@ -166,7 +166,7 @@ def generate_message_from_trades(available_trades: AvailableTrades, max_message_
 
     return generate_messages_from_lines(lines, max_message_length)
 
-async def _search_impl(ctx, *, content=''):
+async def _search_impl(ctx: commands.Context, *, content: str = '') -> None:
     try:
         cards = parse_search_input(content)
     except ValueError as e:
@@ -179,7 +179,7 @@ async def _search_impl(ctx, *, content=''):
     for message in generate_message_from_trades(available_trades):
         await ctx.send(message, suppress_embeds=True)
 
-async def _search_exact_impl(ctx, *, content=''):
+async def _search_exact_impl(ctx: commands.Context, *, content: str = '') -> None:
     try:
         cards = parse_search_input(content)
     except ValueError as e:
@@ -193,27 +193,27 @@ async def _search_exact_impl(ctx, *, content=''):
         await ctx.send(message, suppress_embeds=True)
 
 @bot.command()
-async def search(ctx, *, content=''):
+async def search(ctx: commands.Context, *, content: str = '') -> None:
     await _search_impl(ctx=ctx, content=content)
 
 @bot.command()
-async def search_exact(ctx, *, content=''):
+async def search_exact(ctx: commands.Context, *, content: str = '') -> None:
     await _search_exact_impl(ctx=ctx, content=content)
 
 @bot.command()
-async def search_deck(ctx):
+async def search_deck(ctx: commands.Context) -> None:
     deck_id, _ = extract_moxfield_info(ctx, MoxfieldAsset.DECK)
     exported_cards = get_decklist_export(deck_id)
     await _search_impl(ctx=ctx, content=exported_cards)
 
 @bot.command()
-async def search_deck_exact(ctx):
+async def search_deck_exact(ctx: commands.Context) -> None:
     deck_id, _ = extract_moxfield_info(ctx, MoxfieldAsset.DECK)
     exported_cards = get_decklist_export(deck_id)
     await _search_exact_impl(ctx=ctx, content=exported_cards)
 
 @bot.command()
-async def search_self(ctx, *, content=''):
+async def search_self(ctx: commands.Context, *, content: str = '') -> None:
     try:
         cards = parse_search_input(content)
     except ValueError as e:
