@@ -177,7 +177,7 @@ async def _search_impl(ctx, *, content=''):
     available_trades = await trade_manager.fuzzy_search(cards, discord_ids)
 
     for message in generate_message_from_trades(available_trades):
-        await ctx.send(message)
+        await ctx.send(message, suppress_embeds=True)
 
 async def _search_exact_impl(ctx, *, content=''):
     try:
@@ -190,7 +190,7 @@ async def _search_exact_impl(ctx, *, content=''):
     available_trades = await trade_manager.exact_search(cards, discord_ids)
 
     for message in generate_message_from_trades(available_trades):
-        await ctx.send(message)
+        await ctx.send(message, suppress_embeds=True)
 
 @bot.command()
 async def search(ctx, *, content=''):
@@ -226,7 +226,7 @@ async def search_self(ctx, *, content=''):
     available_trades = await trade_manager.search_for_card(query, discord_ids)
 
     for message in generate_message_from_trades(available_trades):
-        await ctx.send(message)
+        await ctx.send(message, suppress_embeds=True)
 
 if __name__ == "__main__":
     bot.run(token, log_handler=handler, log_level=logging.DEBUG)
