@@ -16,7 +16,7 @@ dependencies = [
 [project.scripts]
 mtg-discord-bot = "mtg_discord_trading_bot.main:main"
 
-[project.optional_dependencies]
+[dependency-groups]
 dev = [
     "pytest",
     "pyright",
@@ -24,4 +24,3 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
