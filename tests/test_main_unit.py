@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import unittest
 
-from main import generate_messages_from_lines, generate_message_from_trades, parse_search_input
-from main import link_moxfield, search, search_exact
-from decklist_parser import CardQuery, Printing
-from models.moxfield_types import MoxfieldAsset
+from mtg_discord_trading_bot.main import generate_messages_from_lines, generate_message_from_trades, parse_search_input
+from mtg_discord_trading_bot.main import link_moxfield, search, search_exact
+from mtg_discord_trading_bot.decklist_parser import CardQuery, Printing
+from mtg_discord_trading_bot.models.moxfield_types import MoxfieldAsset
 
 class TestSearchFunction(unittest.TestCase):
 
@@ -45,7 +45,7 @@ class TestSearchCommand(unittest.TestCase):
         ctx.guild.members = []
         ctx.send = AsyncMock()
         mock_search = AsyncMock(return_value={})
-        with patch('main.trade_manager.search_for_card', mock_search):
+        with patch('mtg_discord_trading_bot.main.trade_manager.search_for_card', mock_search):
             asyncio.run(command(ctx, content=content))
         return mock_search
 
@@ -130,7 +130,7 @@ def test_link_moxfield_calls_extract_moxfield_info_with_correct_args(message_con
     ctx = MagicMock()
     ctx.message.content = message_content
 
-    with patch('main._link_moxfield') as mock_internal_link_moxfield:
+    with patch('mtg_discord_trading_bot.main._link_moxfield') as mock_internal_link_moxfield:
         asyncio.run(link_moxfield(ctx))
         mock_internal_link_moxfield.assert_called_once_with(ctx, expected_moxfield_type)
 
@@ -155,7 +155,7 @@ class TestGenerateMessageFromTrades(unittest.TestCase):
         mock_tm = MagicMock()
         mock_tm.get_trader.return_value = mock_trader
 
-        with patch('main.bot') as mock_bot, patch('main.trade_manager', mock_tm):
+        with patch('mtg_discord_trading_bot.main.bot') as mock_bot, patch('mtg_discord_trading_bot.main.trade_manager', mock_tm):
             mock_bot.get_user.return_value = mock_user
             messages = generate_message_from_trades(self._make_trades(discord_id))
 
@@ -172,7 +172,7 @@ class TestGenerateMessageFromTrades(unittest.TestCase):
         mock_tm = MagicMock()
         mock_tm.get_trader.return_value = mock_trader
 
-        with patch('main.bot') as mock_bot, patch('main.trade_manager', mock_tm):
+        with patch('mtg_discord_trading_bot.main.bot') as mock_bot, patch('mtg_discord_trading_bot.main.trade_manager', mock_tm):
             mock_bot.get_user.return_value = mock_user
             messages = generate_message_from_trades(self._make_trades(discord_id))
 

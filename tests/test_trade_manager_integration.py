@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from trade_manager import TradeManager, TraderNotFound
+from mtg_discord_trading_bot.trade_manager import TradeManager, TraderNotFound
 
 
 def test_search_for_card_integration():
@@ -29,7 +29,7 @@ class TestWishlistPersistence(unittest.TestCase):
         os.unlink(self.users_file)
 
     def test_set_wishlist_persists(self):
-        with patch('trade_manager.USERS_FILE', self.users_file):
+        with patch('mtg_discord_trading_bot.trade_manager.USERS_FILE', self.users_file):
             tm = TradeManager()
             tm.set_wishlist("123", "deck_xyz")
 
@@ -49,7 +49,7 @@ class TestWishlistPersistence(unittest.TestCase):
                 }
             ]}, f)
 
-        with patch('trade_manager.USERS_FILE', self.users_file):
+        with patch('mtg_discord_trading_bot.trade_manager.USERS_FILE', self.users_file):
             tm = TradeManager()
 
         trader = tm.get_trader("123")
@@ -68,7 +68,7 @@ class TestWishlistPersistence(unittest.TestCase):
                 }
             ]}, f)
 
-        with patch('trade_manager.USERS_FILE', self.users_file):
+        with patch('mtg_discord_trading_bot.trade_manager.USERS_FILE', self.users_file):
             tm = TradeManager()
             removed = tm.remove_wishlist("123")
 
@@ -79,19 +79,19 @@ class TestWishlistPersistence(unittest.TestCase):
         self.assertNotIn("wishlist_id", user)
 
     def test_remove_wishlist_returns_false_when_no_wishlist(self):
-        with patch('trade_manager.USERS_FILE', self.users_file):
+        with patch('mtg_discord_trading_bot.trade_manager.USERS_FILE', self.users_file):
             tm = TradeManager()
             result = tm.remove_wishlist("123")
         self.assertFalse(result)
 
     def test_remove_wishlist_raises_for_unknown_trader(self):
-        with patch('trade_manager.USERS_FILE', self.users_file):
+        with patch('mtg_discord_trading_bot.trade_manager.USERS_FILE', self.users_file):
             tm = TradeManager()
             with self.assertRaises(TraderNotFound):
                 tm.remove_wishlist("999")
 
     def test_missing_wishlist_id_defaults_to_none(self):
-        with patch('trade_manager.USERS_FILE', self.users_file):
+        with patch('mtg_discord_trading_bot.trade_manager.USERS_FILE', self.users_file):
             tm = TradeManager()
         trader = tm.get_trader("123")
         assert trader is not None
@@ -99,7 +99,7 @@ class TestWishlistPersistence(unittest.TestCase):
         self.assertIsNone(trader.wishlist_url)
 
     def test_set_wishlist_omits_key_when_none(self):
-        with patch('trade_manager.USERS_FILE', self.users_file):
+        with patch('mtg_discord_trading_bot.trade_manager.USERS_FILE', self.users_file):
             tm = TradeManager()
             tm.set_wishlist("123", None)
 
